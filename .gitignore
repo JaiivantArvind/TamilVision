@@ -70,3 +70,13 @@ desktop.ini
 .idea/
 *.suo
 *.user
+
+# -----------------------------------------------------------------------------
+# Next.js frontend (frontend/)
+# -----------------------------------------------------------------------------
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/.npm
+frontend/.eslintcache
+frontend/.env*.local

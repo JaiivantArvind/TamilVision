@@ -5,6 +5,8 @@
   <img src="https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white"/>
   <img src="https://img.shields.io/badge/FastAPI-0.104-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
   <img src="https://img.shields.io/badge/OpenCV-4.8-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Three.js-0.183-black?style=for-the-badge&logo=threedotjs&logoColor=white"/>
   <img src="https://img.shields.io/badge/CUDA-11.8-76B900?style=for-the-badge&logo=nvidia&logoColor=white"/>
 </p>
 
@@ -23,6 +25,7 @@
 | 🔀 **Universal preprocessing** | Handles white-on-black canvas art *and* black-on-white scans through the same robust OpenCV pipeline |
 | 🧠 **156-class coverage** | Vowels (உயிர்), pure consonants (மெய்), base consonants, and all six vowel-marker series |
 | 📊 **Confidence colouring** | Green ≥ 70 %, amber 40–70 %, red < 40 % — instant visual feedback on prediction quality |
+| 🌄 **Animated background** | GLSL Perlin-noise hills rendered in real-time with Three.js WebGL — zero impact on prediction latency |
 
 ---
 
@@ -30,25 +33,34 @@
 
 ```
 TamilVision/
-├── frontend/
-│   └── index.html          # Single-page UI (Tailwind CSS, vanilla JS)
+├── frontend/                   # React / Next.js 16 frontend (shadcn + Tailwind v4)
+│   ├── app/
+│   │   ├── layout.tsx          # Root layout — dark theme, Mukta Malar font
+│   │   ├── page.tsx            # Full TamilVision UI (canvas, upload, results)
+│   │   └── globals.css         # Tailwind v4 + shadcn CSS variables
+│   ├── components/
+│   │   └── ui/
+│   │       └── glsl-hills.tsx  # Three.js GLSL Perlin-noise hills background
+│   ├── lib/utils.ts            # shadcn utility helpers
+│   ├── package.json            # React 19, Next.js 16, Three.js 0.183
+│   └── index_vanilla.html      # Original vanilla JS/HTML backup
 │
 ├── app/
-│   └── main.py             # FastAPI server & /predict endpoint
+│   └── main.py                 # FastAPI server & /predict endpoint
 │
 ├── src/
-│   ├── config.py           # 156 Tamil class labels & hyperparameters
-│   ├── model.py            # TamilVision architecture (MobileNetV3-Small)
-│   ├── preprocess.py       # OpenCV inference pipeline + torchvision train transforms
-│   ├── dataset.py          # PyTorch Dataset with shared-memory RAM cache
-│   └── train.py            # Full training loop (AMP, AdamW, cosine LR)
+│   ├── config.py               # 156 Tamil class labels & hyperparameters
+│   ├── model.py                # TamilVision architecture (MobileNetV3-Small)
+│   ├── preprocess.py           # OpenCV inference pipeline + torchvision train transforms
+│   ├── dataset.py              # PyTorch Dataset with shared-memory RAM cache
+│   └── train.py                # Full training loop (AMP, AdamW, cosine LR)
 │
 ├── models/
-│   └── best_model.pth      # Trained checkpoint (~19 MB)
+│   └── best_model.pth          # Trained checkpoint (~19 MB)
 │
-├── scripts/                # Utility scripts (visualize, validate, sanity-check, auto-tune)
-├── data/                   # Dataset root (gitignored — see Dataset section)
-├── requirements.txt
+├── scripts/                    # Utility scripts (visualize, validate, sanity-check, auto-tune)
+├── data/                       # Dataset root (gitignored — see Dataset section)
+├── requirements.txt            # Python backend dependencies
 └── .gitignore
 ```
 
@@ -61,13 +73,38 @@ TamilVision/
 | **Model** | PyTorch 2.1 · MobileNetV3-Small · ImageNet pretrained weights |
 | **Preprocessing** | OpenCV 4.8 · NumPy · Pillow |
 | **Backend** | FastAPI 0.104 · Uvicorn · python-multipart |
-| **Frontend** | HTML5 Canvas · Tailwind CSS · Vanilla JS · Google Fonts (Mukta Malar for Tamil) |
+| **Frontend** | Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · shadcn/ui |
+| **3-D Background** | Three.js 0.183 · GLSL Perlin-noise vertex shader (`GLSLHills`) |
 | **Training** | Mixed-precision AMP · AdamW · CosineAnnealingLR · Label smoothing |
 | **Hardware** | NVIDIA GTX 1650 · CUDA 11.8 |
 
 ---
 
-## ⚙️ How It Works
+## 🌄 GLSLHills — Animated Background
+
+The animated wireframe hills are a self-contained React component (`components/ui/glsl-hills.tsx`) that runs entirely on the GPU via Three.js + custom GLSL shaders. It is zero-dependency beyond Three.js and adds **no overhead** to the prediction pipeline.
+
+### How it works
+
+| Step | Detail |
+|---|---|
+| **Geometry** | `PlaneGeometry(256, 256, 256, 256)` — 256×256 subdivided flat plane |
+| **Vertex shader** | Rotates the plane to face the camera, then displaces each vertex vertically using **3-octave Classic Perlin Noise** (`cnoise`). The noise input drifts along the Z axis over `time`, creating the flowing hills illusion. |
+| **Fragment shader** | Solid grey (`vec3(0.6)`) with opacity that fades out with distance — edges dissolve naturally. |
+| **Animation** | A `requestAnimationFrame` loop advances `uniforms.time` each frame. The loop is cancelled on React unmount to prevent memory leaks. |
+| **Resize** | A `window.resize` listener keeps the camera aspect ratio and renderer size in sync. |
+
+### Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `width` | `string` | `"100vw"` | Container width |
+| `height` | `string` | `"100vh"` | Container height |
+| `cameraZ` | `number` | `125` | Camera Z distance (zoom) |
+| `planeSize` | `number` | `256` | Plane subdivisions & size |
+| `speed` | `number` | `0.5` | Animation speed multiplier |
+
+---
 
 ### 1 — Model Architecture
 
@@ -184,6 +221,7 @@ Canvas PNG             Uploaded JPG/PNG        Transparent PNG
 ### Prerequisites
 
 - Python 3.10 or higher
+- Node.js 18+ and npm (for the React frontend)
 - NVIDIA GPU with CUDA 11.8 recommended (CPU also works — see note below)
 - Git
 
@@ -231,22 +269,23 @@ Expected output:
 INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
-### 5 — Open the frontend
+### 5 — Start the React frontend
 
-Open `frontend/index.html` directly in your browser — no build step needed:
+Open a **second terminal** tab and run:
 
 ```bash
-# Windows
-start frontend/index.html
-
-# macOS
-open frontend/index.html
-
-# Linux
-xdg-open frontend/index.html
+cd frontend
+npm install        # first run only — installs Next.js, Three.js, shadcn, etc.
+npm run dev
 ```
 
-The status dot in the top-right corner turns **green** when the frontend is connected to the API.
+Then open [http://localhost:3000](http://localhost:3000) in your browser.
+
+The animated GLSL wireframe hills render in the background while the prediction panels load on top.  
+The status dot in the top-right corner turns **green** when the frontend is connected to the FastAPI server.
+
+> **Vanilla fallback:** `frontend/index_vanilla.html` is the original single-file UI and still works  
+> without any build step if you open it directly in the browser.
 
 ---
 
