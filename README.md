@@ -1,106 +1,329 @@
-# TamilVision 247
+# TamilVision 156
 
-**Offline/Online Tamil Character Recognition System**
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/PyTorch-2.1.0-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white"/>
+  <img src="https://img.shields.io/badge/FastAPI-0.104-009688?style=for-the-badge&logo=fastapi&logoColor=white"/>
+  <img src="https://img.shields.io/badge/OpenCV-4.8-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white"/>
+  <img src="https://img.shields.io/badge/CUDA-11.8-76B900?style=for-the-badge&logo=nvidia&logoColor=white"/>
+</p>
 
-## 🎯 Objective
-
-TamilVision 247 is a high-performance deep learning system designed for recognizing Tamil characters across **247 classes**. The model supports both offline (image-based) and online (real-time) character recognition, making it suitable for document digitization, handwriting recognition, and assistive technologies.
-
-## 🏗️ Architecture
-
-- **Backbone**: MobileNetV3-Small
-- **Attention Mechanism**: Squeeze-and-Excitation (SE) Blocks
-- **Input Format**: 128x128 Grayscale images
-- **Output**: 247 Tamil character classes
-
-### Why This Architecture?
-
-- **MobileNetV3-Small**: Optimized for edge devices and resource-constrained environments while maintaining high accuracy
-- **SE Attention**: Enhances feature discrimination by adaptively recalibrating channel-wise feature responses
-- **Grayscale Input**: Reduces computational overhead while preserving character structure information
-
-## 📋 Requirements
-
-- Python 3.8+
-- CUDA 11.8 (GTX 1650 compatible)
-- 4GB+ GPU Memory recommended
-
-## 🚀 Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd T-2
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-## 📊 Dataset
-
-The model is trained on **247 Tamil character classes** including:
-- Vowels (உயிரெழுத்துகள்)
-- Consonants (மெய்யெழுத்துகள்)
-- Compound characters (உயிர்மெய் எழுத்துகள்)
-
-## 🔧 Model Specifications
-
-| Component | Specification |
-|-----------|---------------|
-| Input Size | 128x128x1 (Grayscale) |
-| Architecture | MobileNetV3-Small + SE Attention |
-| Parameters | ~1.5M (lightweight) |
-| Output Classes | 247 |
-| Framework | PyTorch 2.1.0 |
-
-## 💻 Usage
-
-### Training
-
-```python
-# Training code coming soon
-python train.py --config config.yaml
-```
-
-### Inference
-
-```python
-# Inference code coming soon
-python predict.py --image path/to/tamil_char.png
-```
-
-### API Server
-
-```bash
-# Start FastAPI server
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
-```
-
-## 📈 Performance
-
-- **Target Accuracy**: >95% on test set
-- **Inference Speed**: <50ms per image (GPU)
-- **Model Size**: ~6MB (quantized)
-
-## 🛠️ Hardware Compatibility
-
-Optimized for:
-- NVIDIA GTX 1650 (4GB VRAM)
-- CUDA 11.8
-- Edge devices with limited computational resources
-
-## 📝 License
-
-[Specify License]
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
-## 📧 Contact
-
-[Your Contact Information]
+> **Real-time Tamil handwritten character recognition in the browser.**  
+> Draw a character on the canvas, upload a scan, or drop a photo — TamilVision identifies it from **156 Unicode Tamil characters** in under 50 ms.
 
 ---
 
-**Built with ❤️ for Tamil Language Preservation**
+## ✨ Features
+
+| Feature | Detail |
+|---|---|
+| 🖊️ **Canvas drawing** | Draw directly in the browser with an adjustable-width brush on a touch & mouse-friendly canvas |
+| 📁 **Image upload** | Drag-and-drop or browse for PNG, JPG, or BMP — including transparent PNGs and scanned documents |
+| ⚡ **Real-time prediction** | Top-3 predictions returned with confidence scores and animated progress bars |
+| 🔀 **Universal preprocessing** | Handles white-on-black canvas art *and* black-on-white scans through the same robust OpenCV pipeline |
+| 🧠 **156-class coverage** | Vowels (உயிர்), pure consonants (மெய்), base consonants, and all six vowel-marker series |
+| 📊 **Confidence colouring** | Green ≥ 70 %, amber 40–70 %, red < 40 % — instant visual feedback on prediction quality |
+
+---
+
+## 🗂️ Project Structure
+
+```
+TamilVision/
+├── frontend/
+│   └── index.html          # Single-page UI (Tailwind CSS, vanilla JS)
+│
+├── app/
+│   └── main.py             # FastAPI server & /predict endpoint
+│
+├── src/
+│   ├── config.py           # 156 Tamil class labels & hyperparameters
+│   ├── model.py            # TamilVision architecture (MobileNetV3-Small)
+│   ├── preprocess.py       # OpenCV inference pipeline + torchvision train transforms
+│   ├── dataset.py          # PyTorch Dataset with shared-memory RAM cache
+│   └── train.py            # Full training loop (AMP, AdamW, cosine LR)
+│
+├── models/
+│   └── best_model.pth      # Trained checkpoint (~19 MB)
+│
+├── scripts/                # Utility scripts (visualize, validate, sanity-check, auto-tune)
+├── data/                   # Dataset root (gitignored — see Dataset section)
+├── requirements.txt
+└── .gitignore
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Model** | PyTorch 2.1 · MobileNetV3-Small · ImageNet pretrained weights |
+| **Preprocessing** | OpenCV 4.8 · NumPy · Pillow |
+| **Backend** | FastAPI 0.104 · Uvicorn · python-multipart |
+| **Frontend** | HTML5 Canvas · Tailwind CSS · Vanilla JS · Google Fonts (Mukta Malar for Tamil) |
+| **Training** | Mixed-precision AMP · AdamW · CosineAnnealingLR · Label smoothing |
+| **Hardware** | NVIDIA GTX 1650 · CUDA 11.8 |
+
+---
+
+## ⚙️ How It Works
+
+### 1 — Model Architecture
+
+`TamilVision` is a fine-tuned **MobileNetV3-Small** with two surgical modifications:
+
+1. **Grayscale input adapter** — the first 3-channel RGB conv layer is replaced with a single-channel layer. The pretrained RGB weights are *summed* across the channel axis, preserving all learned edge and texture detectors without discarding any prior knowledge.
+2. **New classifier head** — the final `Linear(1024 → 1000)` ImageNet head is replaced with `Linear(1024 → 156)`, initialised with Kaiming-uniform weights.
+
+The model accepts tensors of shape `[B, 1, 128, 128]` normalised to `[-1, 1]` and outputs `[B, 156]` logits.
+
+---
+
+### 2 — OpenCV Inference Preprocessing Pipeline
+
+The biggest challenge this project solves is the **domain gap**: the training data is *black ink on white*, but the browser canvas produces *white ink on black* with large empty margins. The 12-step pipeline in `src/preprocess.py` bridges that gap for every possible input type:
+
+```
+Canvas PNG             Uploaded JPG/PNG        Transparent PNG
+(white on black)       (black on white)        (BGRA)
+       │                      │                     │
+       └──────────────────────┴─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 1 · cv2.IMREAD_UNCHANGED           │
+          │  4-channel BGRA → alpha-composite onto   │
+          │  solid white → convert to grayscale      │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 2 · Otsu's Binary Threshold        │
+          │  Forces every pixel to pure 0 or 255,   │
+          │  eliminating JPEG compression noise      │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 3 · Smart Background Inversion     │
+          │  np.mean(img) > 127 → light background  │
+          │  detected → cv2.bitwise_not to flip      │
+          │  Result: white character on black bg     │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 4 · Median Blur (3×3)              │
+          │  Removes single-pixel JPG artefacts      │
+          │  without blurring stroke edges           │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 5 · Bounding-Box Crop              │
+          │  cv2.findNonZero + cv2.boundingRect      │
+          │  Discards all surrounding black margin   │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 6 · Aspect-Ratio Square Pad        │
+          │  Pads the shorter axis with black pixels │
+          │  → perfect square, no stretching         │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 7 · Uniform Border Padding (15 px) │
+          │  cv2.copyMakeBorder, value=0             │
+          │  Glyph never touches the image edge      │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 8 · Final Invert                   │
+          │  cv2.bitwise_not → black ink on white    │
+          │  Matches training data format exactly    │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 9 · Gaussian Blur (3×3, σ=1.5)    │
+          │  Softens hard digital edges to match     │
+          │  the scanned-ink texture of the dataset  │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 10 · Resize to 128×128 (Lanczos)  │
+          └───────────────────┬─────────────────────┘
+                              ▼
+          ┌─────────────────────────────────────────┐
+          │  Step 11 · Normalise → [-1, 1]           │
+          │  tensor = (pixel/255 − 0.5) / 0.5        │
+          │  Shape: [1, 1, 128, 128] float32         │
+          └───────────────────┬─────────────────────┘
+                              ▼
+                       TamilVision Model
+                              ▼
+                    Softmax → Top-3 results
+```
+
+---
+
+### 3 — Training Details
+
+| Setting | Value |
+|---|---|
+| Dataset | uTHCD (80/20 split) |
+| Classes | 156 Tamil Unicode characters |
+| Input size | 128 × 128 grayscale |
+| Batch size | 256 |
+| Epochs | 30 |
+| Optimiser | AdamW (lr=1e-3, weight_decay=1e-4) |
+| Scheduler | 3-epoch linear warm-up → CosineAnnealingLR |
+| Loss | CrossEntropyLoss with label smoothing = 0.1 |
+| Augmentation | RandomRotation ±20°, RandomAffine, RandomPerspective, ElasticTransform |
+| Precision | Mixed (AMP / FP16) |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.10 or higher
+- NVIDIA GPU with CUDA 11.8 recommended (CPU also works — see note below)
+- Git
+
+### 1 — Clone the repository
+
+```bash
+git clone https://github.com/JaiivantArvind/TamilVision.git
+cd TamilVision
+```
+
+### 2 — Create and activate a virtual environment
+
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS / Linux
+python -m venv venv
+source venv/bin/activate
+```
+
+### 3 — Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> **CPU-only machines:** Edit the first two lines of `requirements.txt` before installing:
+> ```
+> --index-url https://download.pytorch.org/whl/cpu
+> torch==2.1.0
+> torchvision==0.16.0
+> ```
+
+### 4 — Start the API server
+
+```bash
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Expected output:
+```
+[TamilVision] Model loaded — device: cuda | best val acc: XX.XX%
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+### 5 — Open the frontend
+
+Open `frontend/index.html` directly in your browser — no build step needed:
+
+```bash
+# Windows
+start frontend/index.html
+
+# macOS
+open frontend/index.html
+
+# Linux
+xdg-open frontend/index.html
+```
+
+The status dot in the top-right corner turns **green** when the frontend is connected to the API.
+
+---
+
+## 🔌 API Reference
+
+### `GET /`
+Health check — returns model status and best validation accuracy.
+
+```json
+{
+  "status": "TamilVision API Online",
+  "accuracy": "97.43%",
+  "device": "cuda",
+  "classes": 156
+}
+```
+
+### `POST /predict`
+Accepts a Tamil character image as `multipart/form-data`.
+
+| Field | Type | Description |
+|---|---|---|
+| `file` | `UploadFile` | PNG, JPG, or BMP image of a Tamil character |
+
+**Response**
+```json
+{
+  "predictions": [
+    { "predicted_character": "க",  "confidence": 0.973214, "label_id": 36 },
+    { "predicted_character": "கி", "confidence": 0.018432, "label_id": 59 },
+    { "predicted_character": "கீ", "confidence": 0.005102, "label_id": 82 }
+  ]
+}
+```
+
+---
+
+## 📚 Dataset
+
+This project uses the **uTHCD** (University of Tamil Nadu Handwritten Character Dataset).
+
+1. Download from [Mendeley Data](https://data.mendeley.com/datasets/p36fh3jgbm/1)
+2. Extract to `data/raw/`
+3. Expected layout:
+
+```
+data/raw/uTHCD_b(80-20-split)/80-20-split/train-test-classwise/
+    train/
+        அ/   0001_0.bmp  ...
+        ஆ/   ...
+    test/
+        ...
+```
+
+---
+
+## 🏋️ Training Your Own Model
+
+```bash
+# Edit the data split path in src/train.py if needed, then:
+python src/train.py
+```
+
+The best checkpoint is saved automatically to `models/best_model.pth` whenever validation Top-1 accuracy improves.
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+---
+
+## 📝 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">Built with ❤️ for Tamil Language Preservation</p>
