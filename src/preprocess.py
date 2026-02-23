@@ -98,8 +98,9 @@ def process_image_for_inference(image_bytes) -> torch.Tensor:
     • **Canvas drawing** — white strokes on a solid black background.
     • **Uploaded image** — black strokes on a white background, any aspect
       ratio, possibly with JPG compression noise.
-    • **Transparent PNG** — RGBA; composited onto a solid white background
-      before processing.
+    • **Transparent PNG** — RGBA; detects stroke brightness and composites onto
+      the opposite-colour background (black bg for white strokes, white bg for
+      black strokes) so the character is always distinguishable.
 
     Pipeline
     --------
@@ -144,13 +145,16 @@ def process_image_for_inference(image_bytes) -> torch.Tensor:
     if img is None:
         raise ValueError("Could not decode image — ensure the file is a valid PNG/JPG.")
 
-    # Handle transparent PNGs (BGRA → composite onto solid white → grayscale)
+    # Handle transparent PNGs (BGRA)
+    # Detect whether strokes are light or dark, then composite onto the
+    # opposite-colour background so strokes are always distinguishable.
     if img.ndim == 3 and img.shape[2] == 4:
-        bgr   = img[:, :, :3].astype(np.float32)
-        alpha = img[:, :,  3].astype(np.float32) / 255.0
-        white = np.ones_like(bgr) * 255.0
-        bgr   = bgr * alpha[:, :, np.newaxis] + white * (1.0 - alpha[:, :, np.newaxis])
-        img   = cv2.cvtColor(bgr.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        alpha = img[:, :, 3].astype(np.float32) / 255.0
+        gray  = cv2.cvtColor(img[:, :, :3], cv2.COLOR_BGR2GRAY).astype(np.float32)
+        opaque = alpha > 0.5
+        # Light strokes (white canvas) → composite onto black; dark strokes → onto white
+        bg_val = 0.0 if (opaque.any() and np.mean(gray[opaque]) > 127) else 255.0
+        img = (gray * alpha + bg_val * (1.0 - alpha)).astype(np.uint8)
     elif img.ndim == 3:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 

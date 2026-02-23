@@ -26,6 +26,7 @@
 | 🧠 **156-class coverage** | Vowels (உயிர்), pure consonants (மெய்), base consonants, and all six vowel-marker series |
 | 📊 **Confidence colouring** | Green ≥ 70 %, amber 40–70 %, red < 40 % — instant visual feedback on prediction quality |
 | 🌄 **Animated background** | GLSL Perlin-noise hills rendered in real-time with Three.js WebGL — zero impact on prediction latency |
+| 🪟 **Glassmorphism UI** | Panels use `backdrop-blur` + translucent fills so the WebGL background shows through; sky-blue accent throughout |
 
 ---
 
