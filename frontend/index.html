@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TamilVision 156</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Mukta Malar (Tamil support) + Inter (UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Mukta+Malar:wght@400;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .tamil { font-family: 'Mukta Malar', serif; }
+
+    /* Neon blue glow for header */
+    .neon-text {
+      color: #38bdf8;
+      text-shadow: 0 0 10px #38bdf8, 0 0 30px #0ea5e9, 0 0 60px #0284c7;
+    }
+
+    /* Canvas cursor */
+    #draw-canvas { cursor: crosshair; touch-action: none; }
+
+    /* Animated confidence bar fill */
+    .bar-fill { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* Tab active state */
+    .tab-active {
+      background: #1e40af;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    /* Drag-over highlight */
+    .drag-over {
+      border-color: #38bdf8 !important;
+      background: rgba(56, 189, 248, 0.08) !important;
+    }
+
+    /* Pulse animation for loading */
+    @keyframes pulse-ring {
+      0%   { transform: scale(0.9); opacity: 1; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid #38bdf8;
+      animation: pulse-ring 1.2s ease-out infinite;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1f2937; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+  </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <header class="border-b border-gray-700 bg-gray-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-lg tamil font-bold">த</div>
+        <h1 class="text-2xl font-bold neon-text tracking-wide">TamilVision 156</h1>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-gray-400">
+        <span id="api-status-dot" class="w-2 h-2 rounded-full bg-gray-500"></span>
+        <span id="api-status-text">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main ─────────────────────────────────────────────────── -->
+  <main class="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- ── LEFT: Input Panel ──────────────────────────────────── -->
+    <section class="bg-gray-800 rounded-2xl p-6 flex flex-col gap-5 shadow-xl border border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-200">Input</h2>
+
+      <!-- Tabs -->
+      <div class="flex gap-2">
+        <button id="tab-draw"   onclick="switchTab('draw')"
+          class="tab-btn tab-active flex-1 py-2 px-4 rounded-lg border border-gray-600 text-sm font-medium transition-all">
+          ✏️ Draw Mode
+        </button>
+        <button id="tab-upload" onclick="switchTab('upload')"
+          class="tab-btn flex-1 py-2 px-4 rounded-lg border border-gray-600 text-sm font-medium text-gray-400 hover:text-white transition-all">
+          📁 Upload Mode
+        </button>
+      </div>
+
+      <!-- ── Draw Mode ── -->
+      <div id="panel-draw" class="flex flex-col gap-4">
+        <div class="relative rounded-xl overflow-hidden border-2 border-gray-600 shadow-inner"
+             style="background:#000;">
+          <canvas id="draw-canvas" width="400" height="400"
+            class="w-full aspect-square block"></canvas>
+        </div>
+
+        <!-- Brush size -->
+        <div class="flex items-center gap-3 text-sm text-gray-400">
+          <span>Brush</span>
+          <input id="brush-size" type="range" min="4" max="40" value="12"
+            class="flex-1 accent-blue-500" oninput="document.getElementById('brush-label').textContent=this.value+'px'" />
+          <span id="brush-label" class="w-10 text-right">12px</span>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3">
+          <button onclick="clearCanvas()"
+            class="flex-1 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-sm font-medium transition-colors">
+            🗑 Clear
+          </button>
+          <button onclick="predict()"
+            class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-colors shadow-lg shadow-blue-900/50">
+            🔍 Predict
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Upload Mode ── -->
+      <div id="panel-upload" class="hidden flex flex-col gap-4">
+        <div id="drop-zone"
+          class="border-2 border-dashed border-gray-600 rounded-xl p-10 flex flex-col items-center justify-center gap-3 text-gray-500 cursor-pointer hover:border-blue-500 hover:text-gray-300 transition-all"
+          onclick="document.getElementById('file-input').click()"
+          ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <span class="text-4xl">📂</span>
+          <p class="text-sm font-medium">Drag & drop an image here</p>
+          <p class="text-xs">or click to browse — PNG, JPG, BMP</p>
+        </div>
+
+        <input id="file-input" type="file" accept="image/*" class="hidden" onchange="onFileSelect(event)" />
+
+        <!-- Preview -->
+        <div id="upload-preview" class="hidden rounded-xl overflow-hidden border border-gray-600">
+          <img id="preview-img" class="w-full object-contain max-h-64 bg-black" />
+        </div>
+
+        <button onclick="predict()"
+          class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-colors shadow-lg shadow-blue-900/50 disabled:opacity-40"
+          id="upload-predict-btn" disabled>
+          🔍 Predict
+        </button>
+      </div>
+    </section>
+
+    <!-- ── RIGHT: Results Panel ───────────────────────────────── -->
+    <section class="bg-gray-800 rounded-2xl p-6 flex flex-col gap-6 shadow-xl border border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-200">Results</h2>
+
+      <!-- Idle state -->
+      <div id="result-idle" class="flex-1 flex flex-col items-center justify-center gap-3 text-gray-600 py-12">
+        <span class="text-6xl tamil">த</span>
+        <p class="text-sm">Draw or upload a Tamil character and click Predict</p>
+      </div>
+
+      <!-- Loading state -->
+      <div id="result-loading" class="hidden flex-1 flex flex-col items-center justify-center gap-4 py-12">
+        <div class="relative w-16 h-16 pulse-ring">
+          <div class="w-16 h-16 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
+        </div>
+        <p class="text-sm text-gray-400 animate-pulse">Analysing character…</p>
+      </div>
+
+      <!-- Results -->
+      <div id="result-content" class="hidden flex flex-col gap-6">
+
+        <!-- Top prediction -->
+        <div class="bg-gray-900 rounded-xl p-6 flex items-center gap-6 border border-gray-700">
+          <div class="relative">
+            <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shadow-lg shadow-blue-900/60">
+              <span id="top-char" class="tamil text-5xl font-bold text-white">?</span>
+            </div>
+          </div>
+          <div class="flex-1">
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Top Prediction</p>
+            <p id="top-label-id" class="text-xs text-blue-400 font-mono mb-3">label —</p>
+
+            <!-- Confidence bar -->
+            <div class="flex items-center gap-3">
+              <div class="flex-1 bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div id="conf-bar" class="bar-fill h-3 rounded-full w-0
+                  bg-gradient-to-r from-green-500 to-emerald-400"></div>
+              </div>
+              <span id="conf-pct" class="text-sm font-semibold text-emerald-400 w-14 text-right">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alternatives -->
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-widest mb-3">Alternatives</p>
+          <div id="alt-list" class="flex flex-col gap-2"></div>
+        </div>
+
+        <!-- Predict again -->
+        <button onclick="resetResults()"
+          class="mt-auto py-2 rounded-xl border border-gray-600 hover:bg-gray-700 text-sm text-gray-400 hover:text-white transition-colors">
+          ↩ Try Again
+        </button>
+      </div>
+
+      <!-- Error state -->
+      <div id="result-error" class="hidden flex-1 flex flex-col items-center justify-center gap-3 text-red-400 py-12">
+        <span class="text-4xl">⚠️</span>
+        <p id="error-msg" class="text-sm text-center px-4">Something went wrong.</p>
+        <button onclick="resetResults()" class="text-xs underline text-gray-500 hover:text-white">Try again</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Footer ───────────────────────────────────────────────── -->
+  <footer class="text-center text-xs text-gray-700 py-6">
+    TamilVision 156 · MobileNetV3-Small · 156 Classes · GTX 1650
+  </footer>
+
+  <!-- ════════════════════════════════════════════════════════════
+       Script
+  ═════════════════════════════════════════════════════════════ -->
+  <script>
+    const API = 'http://localhost:8000';
+
+    // ── API status ping ─────────────────────────────────────────
+    async function pingAPI() {
+      try {
+        const res  = await fetch(`${API}/`, { signal: AbortSignal.timeout(3000) });
+        const data = await res.json();
+        document.getElementById('api-status-dot').className  = 'w-2 h-2 rounded-full bg-green-400';
+        document.getElementById('api-status-text').textContent = `Online · ${data.accuracy || ''}`;
+      } catch {
+        document.getElementById('api-status-dot').className  = 'w-2 h-2 rounded-full bg-red-500';
+        document.getElementById('api-status-text').textContent = 'API Offline';
+      }
+    }
+    pingAPI();
+    setInterval(pingAPI, 15000);
+
+    // ── Tab switching ───────────────────────────────────────────
+    function switchTab(tab) {
+      document.getElementById('panel-draw').classList.toggle('hidden',   tab !== 'draw');
+      document.getElementById('panel-upload').classList.toggle('hidden', tab !== 'upload');
+      document.getElementById('tab-draw').classList.toggle('tab-active',   tab === 'draw');
+      document.getElementById('tab-upload').classList.toggle('tab-active', tab === 'upload');
+      document.getElementById('tab-draw').classList.toggle('text-gray-400',   tab !== 'draw');
+      document.getElementById('tab-upload').classList.toggle('text-gray-400', tab !== 'upload');
+      currentTab = tab;
+      resetResults();
+    }
+    let currentTab = 'draw';
+
+    // ── Canvas Drawing ──────────────────────────────────────────
+    const canvas  = document.getElementById('draw-canvas');
+    const ctx     = canvas.getContext('2d');
+    let drawing   = false;
+    let lastX = 0, lastY = 0;
+
+    function getPos(e) {
+      const r = canvas.getBoundingClientRect();
+      const scaleX = canvas.width  / r.width;
+      const scaleY = canvas.height / r.height;
+      if (e.touches) {
+        return [
+          (e.touches[0].clientX - r.left) * scaleX,
+          (e.touches[0].clientY - r.top)  * scaleY,
+        ];
+      }
+      return [(e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY];
+    }
+
+    function startDraw(e) {
+      e.preventDefault();
+      drawing = true;
+      [lastX, lastY] = getPos(e);
+      // Draw a dot for single taps
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, getBrush() / 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+
+    function draw(e) {
+      e.preventDefault();
+      if (!drawing) return;
+      const [x, y] = getPos(e);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth   = getBrush();
+      ctx.lineCap     = 'round';
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      [lastX, lastY] = [x, y];
+    }
+
+    function stopDraw() { drawing = false; }
+    function getBrush()  { return parseInt(document.getElementById('brush-size').value); }
+
+    canvas.addEventListener('mousedown',  startDraw);
+    canvas.addEventListener('mousemove',  draw);
+    canvas.addEventListener('mouseup',    stopDraw);
+    canvas.addEventListener('mouseleave', stopDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove',  draw,      { passive: false });
+    canvas.addEventListener('touchend',   stopDraw);
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      resetResults();
+    }
+
+    // ── Upload Mode ─────────────────────────────────────────────
+    let uploadedFile = null;
+
+    function onFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      setUploadFile(file);
+    }
+
+    function setUploadFile(file) {
+      uploadedFile = file;
+      const url = URL.createObjectURL(file);
+      document.getElementById('preview-img').src = url;
+      document.getElementById('upload-preview').classList.remove('hidden');
+      document.getElementById('upload-predict-btn').disabled = false;
+      resetResults();
+    }
+
+    function onDragOver(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('drag-over');
+    }
+    function onDragLeave(e) {
+      document.getElementById('drop-zone').classList.remove('drag-over');
+    }
+    function onDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) setUploadFile(file);
+    }
+
+    // ── Predict ─────────────────────────────────────────────────
+    async function predict() {
+      showState('loading');
+
+      let blob;
+      try {
+        if (currentTab === 'draw') {
+          blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+          if (!blob) throw new Error('Canvas is empty — draw a character first.');
+        } else {
+          if (!uploadedFile) throw new Error('No file selected.');
+          blob = uploadedFile;
+        }
+
+        const fd = new FormData();
+        fd.append('file', blob, 'char.png');
+
+        const res  = await fetch(`${API}/predict`, { method: 'POST', body: fd });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        renderResults(data.predictions);
+      } catch (err) {
+        showError(err.message || 'Unexpected error.');
+      }
+    }
+
+    // ── Render results ───────────────────────────────────────────
+    function renderResults(preds) {
+      if (!preds || preds.length === 0) { showError('No predictions returned.'); return; }
+
+      const top = preds[0];
+      document.getElementById('top-char').textContent     = top.predicted_character;
+      document.getElementById('top-label-id').textContent = `label ${top.label_id}`;
+
+      const pct = Math.round(top.confidence * 100);
+      document.getElementById('conf-pct').textContent = `${pct}%`;
+
+      // Bar colour: green >70%, yellow 40-70%, red <40%
+      const bar = document.getElementById('conf-bar');
+      bar.style.width = `${pct}%`;
+      bar.className = 'bar-fill h-3 rounded-full ' +
+        (pct >= 70 ? 'bg-gradient-to-r from-green-500 to-emerald-400'
+       : pct >= 40 ? 'bg-gradient-to-r from-yellow-500 to-amber-400'
+                   : 'bg-gradient-to-r from-red-500 to-rose-400');
+
+      // Alternatives
+      const altList = document.getElementById('alt-list');
+      altList.innerHTML = '';
+      preds.slice(1).forEach((p, i) => {
+        const altPct = Math.round(p.confidence * 100);
+        altList.innerHTML += `
+          <div class="bg-gray-900 rounded-xl px-4 py-3 flex items-center gap-4 border border-gray-700">
+            <div class="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center shrink-0">
+              <span class="tamil text-xl font-bold text-gray-200">${p.predicted_character}</span>
+            </div>
+            <div class="flex-1">
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-gray-400">label <span class="font-mono text-blue-400">${p.label_id}</span></span>
+                <span class="text-gray-400">${altPct}%</span>
+              </div>
+              <div class="bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                <div class="h-1.5 rounded-full bg-blue-500/70" style="width:${altPct}%"></div>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      showState('content');
+    }
+
+    // ── UI state helpers ─────────────────────────────────────────
+    function showState(state) {
+      ['idle','loading','content','error'].forEach(s =>
+        document.getElementById(`result-${s}`).classList.toggle('hidden', s !== state)
+      );
+    }
+
+    function showError(msg) {
+      document.getElementById('error-msg').textContent = msg;
+      showState('error');
+    }
+
+    function resetResults() { showState('idle'); }
+  </script>
+</body>
+</html>
