@@ -25,6 +25,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from torchvision.models import MobileNet_V3_Small_Weights
 
 from config import NUM_CLASSES, DEVICE
 
@@ -36,13 +37,17 @@ class TamilVision(nn.Module):
         num_classes: Number of output classes (default: 156).
     """
 
-    def __init__(self, num_classes: int = NUM_CLASSES) -> None:
+    def __init__(
+        self,
+        num_classes: int = NUM_CLASSES,
+        weights: MobileNet_V3_Small_Weights | None = MobileNet_V3_Small_Weights.DEFAULT,
+    ) -> None:
         super().__init__()
 
         # ---------------------------------------------------------------
         # Base: MobileNetV3-Small with ImageNet pretrained weights
         # ---------------------------------------------------------------
-        self.model = models.mobilenet_v3_small(weights="DEFAULT")
+        self.model = models.mobilenet_v3_small(weights=weights)
 
         # ---------------------------------------------------------------
         # Modification 1 — first conv: 3 channels → 1 channel (grayscale)
@@ -98,7 +103,10 @@ class TamilVision(nn.Module):
 # Factory helper
 # ---------------------------------------------------------------------------
 
-def get_model(device: str = DEVICE) -> TamilVision:
+def get_model(
+    device: str = DEVICE,
+    weights: MobileNet_V3_Small_Weights | None = MobileNet_V3_Small_Weights.DEFAULT,
+) -> TamilVision:
     """Instantiate :class:`TamilVision`, print parameter stats, and move to *device*.
 
     Args:
@@ -107,7 +115,7 @@ def get_model(device: str = DEVICE) -> TamilVision:
     Returns:
         Model instance on *device*, ready for training or inference.
     """
-    model = TamilVision(num_classes=NUM_CLASSES).to(device)
+    model = TamilVision(num_classes=NUM_CLASSES, weights=weights).to(device)
 
     total     = sum(p.numel() for p in model.parameters())
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
