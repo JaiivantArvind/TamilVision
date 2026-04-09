@@ -310,7 +310,7 @@ The status dot in the top-right corner turns **green** when the frontend is conn
 1. Import the same repo into Vercel.
 2. Set the project root to `frontend/`.
 3. Add environment variable:
-   - `NEXT_PUBLIC_API_URL=https://<your-render-backend-domain>`
+   - `NEXT_PUBLIC_API_URL=https://<your-render-backend-domain>` (base URL only, no `/predict`)
 4. Deploy.
 
 After both deploys, open the Vercel URL and confirm the status indicator turns green.

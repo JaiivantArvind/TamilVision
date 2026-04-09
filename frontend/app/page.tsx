@@ -20,7 +20,12 @@ type ResultState = 'idle' | 'loading' | 'content' | 'error';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const normalizeApiBase = (rawUrl: string): string => {
+  const normalized = rawUrl.trim().replace(/\/+$/, '').replace(/\/predict$/i, '');
+  return normalized || 'http://localhost:8000';
+};
+
+const API = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
 
 const TAMIL_FONT: React.CSSProperties = { fontFamily: "'Mukta Malar', serif" };
 
