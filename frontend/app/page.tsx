@@ -21,11 +21,22 @@ type ResultState = 'idle' | 'loading' | 'content' | 'error';
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const normalizeApiBase = (rawUrl: string): string => {
-  const normalized = rawUrl.trim().replace(/\/+$/, '').replace(/\/predict$/i, '');
-  return normalized || 'http://localhost:8000';
+  const normalized = rawUrl
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/\/+$/, '')
+    .replace(/\/predict$/i, '');
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  return 'http://localhost:8000';
 };
 
 const API = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000');
+const API_ROOT = new URL('/', `${API}/`).toString();
+const API_PREDICT = new URL('/predict', `${API}/`).toString();
 
 const TAMIL_FONT: React.CSSProperties = { fontFamily: "'Mukta Malar', serif" };
 
@@ -63,7 +74,7 @@ export default function Home() {
   // ── API status ping ──────────────────────────────────────────────────────────
   const pingAPI = useCallback(async () => {
     try {
-      const res  = await fetch(`${API}/`, { signal: AbortSignal.timeout(3000) });
+      const res  = await fetch(API_ROOT, { signal: AbortSignal.timeout(3000) });
       const data = await res.json();
       setApiOnline(true);
       setApiLabel(`Online · ${data.accuracy ?? ''}`);
@@ -158,7 +169,7 @@ export default function Home() {
       const fd = new FormData();
       fd.append('file', blob, 'char.png');
 
-      const res = await fetch(`${API}/predict`, { method: 'POST', body: fd });
+      const res = await fetch(API_PREDICT, { method: 'POST', body: fd });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { detail?: string }).detail ?? `HTTP ${res.status}`);
