@@ -29,6 +29,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.amp import GradScaler, autocast
+from torchvision.models import MobileNet_V3_Small_Weights
 from tqdm import tqdm
 
 from config import BATCH_SIZE, DEVICE, EPOCHS, NUM_CLASSES
@@ -188,7 +189,7 @@ def main() -> None:
     )
 
     # --- Model ---
-    model = get_model(DEVICE)
+    model = get_model(DEVICE, weights=MobileNet_V3_Small_Weights.DEFAULT)
 
     # --- Loss ---
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1).to(DEVICE)

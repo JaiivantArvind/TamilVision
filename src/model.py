@@ -40,12 +40,12 @@ class TamilVision(nn.Module):
     def __init__(
         self,
         num_classes: int = NUM_CLASSES,
-        weights: MobileNet_V3_Small_Weights | None = MobileNet_V3_Small_Weights.DEFAULT,
+        weights: MobileNet_V3_Small_Weights | None = None,
     ) -> None:
         super().__init__()
 
         # ---------------------------------------------------------------
-        # Base: MobileNetV3-Small with ImageNet pretrained weights
+        # Base: MobileNetV3-Small. Default is offline-safe (no external weight download).
         # ---------------------------------------------------------------
         self.model = models.mobilenet_v3_small(weights=weights)
 
@@ -105,7 +105,7 @@ class TamilVision(nn.Module):
 
 def get_model(
     device: str = DEVICE,
-    weights: MobileNet_V3_Small_Weights | None = MobileNet_V3_Small_Weights.DEFAULT,
+    weights: MobileNet_V3_Small_Weights | None = None,
 ) -> TamilVision:
     """Instantiate :class:`TamilVision`, print parameter stats, and move to *device*.
 
