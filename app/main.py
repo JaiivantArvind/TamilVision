@@ -84,10 +84,20 @@ async def lifespan(app: FastAPI):
             checkpoint = torch.load(CHECKPOINT_PATH, map_location=DEVICE, weights_only=True)
             # Load architecture without external pretrained fetch; checkpoint provides all weights.
             _model = TamilVision(num_classes=NUM_CLASSES, weights=None)
-            _model.load_state_dict(checkpoint["model_state"])
+
+            # Support both checkpoint formats:
+            # 1) {"model_state": ..., "val_acc": ...}
+            # 2) raw state_dict
+            if isinstance(checkpoint, dict) and "model_state" in checkpoint:
+                state_dict = checkpoint["model_state"]
+                val_acc = checkpoint.get("val_acc", None)
+            else:
+                state_dict = checkpoint
+                val_acc = None
+
+            _model.load_state_dict(state_dict, strict=True)
             _model.to(DEVICE)
             _model.eval()
-            val_acc = checkpoint.get("val_acc", None)
             _best_val_acc = f"{val_acc:.2f}%" if val_acc is not None else "N/A"
             print(f"[TamilVision] Model loaded — device: {DEVICE} | best val acc: {_best_val_acc}")
         except Exception as exc:
