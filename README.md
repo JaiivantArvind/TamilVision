@@ -290,6 +290,35 @@ The status dot in the top-right corner turns **green** when the frontend is conn
 
 ---
 
+## 🌐 Deploy Live (Recommended: Render + Vercel)
+
+### Backend (Render)
+
+1. Push this repo to GitHub.
+2. In Render, create a **Web Service** from the repo.
+3. Render auto-detects `render.yaml`, so build/start are preconfigured:
+   - **Build:** `pip install -r requirements.deploy.txt`
+   - **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. Set environment variable:
+   - `CORS_ORIGINS=https://<your-vercel-domain>`
+5. Deploy and copy the backend URL, e.g. `https://tamilvision-api.onrender.com`.
+
+> `requirements.deploy.txt` uses CPU PyTorch wheels so deployment works on standard cloud instances.
+
+### Frontend (Vercel)
+
+1. Import the same repo into Vercel.
+2. Set the project root to `frontend/`.
+3. Add environment variable:
+   - `NEXT_PUBLIC_API_URL=https://<your-render-backend-domain>`
+4. Deploy.
+
+After both deploys, open the Vercel URL and confirm the status indicator turns green.
+
+Environment templates are included as `.env.example` (backend) and `frontend/.env.example` (frontend).
+
+---
+
 ## 🔌 API Reference
 
 ### `GET /`

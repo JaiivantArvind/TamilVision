@@ -22,6 +22,7 @@ Run (from project root)
 from __future__ import annotations
 
 import io
+import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -42,6 +43,20 @@ from preprocess import process_image_for_inference
 # Paths
 # ---------------------------------------------------------------------------
 CHECKPOINT_PATH = PROJECT_ROOT / "models" / "best_model.pth"
+
+
+def _get_cors_origins() -> list[str]:
+    raw_origins = os.getenv("CORS_ORIGINS", "*")
+    origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
+CORS_ORIGINS = _get_cors_origins()
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
+
+# Browsers do not allow wildcard origin + credentials together.
+if CORS_ORIGINS == ["*"]:
+    CORS_ALLOW_CREDENTIALS = False
 
 # ---------------------------------------------------------------------------
 # Global model handle (populated at startup)
@@ -102,8 +117,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = ["*"],   # restrict in production
-    allow_credentials = True,
+    allow_origins     = CORS_ORIGINS,
+    allow_credentials = CORS_ALLOW_CREDENTIALS,
     allow_methods     = ["*"],
     allow_headers     = ["*"],
 )
